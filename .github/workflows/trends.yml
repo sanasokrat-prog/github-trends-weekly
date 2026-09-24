@@ -1,0 +1,40 @@
+name: GitHub Trends Weekly
+
+on:
+  schedule:
+    # Каждый понедельник в 09:00 Екатеринбург (UTC+5) = 04:00 UTC
+    - cron: '0 4 * * 1'
+  workflow_dispatch: # Позволяет запустить вручную через вкладку Actions
+
+jobs:
+  collect-trends:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4
+
+      - name: Collect GitHub Trends
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python scripts/collect_trends.py
+
+      - name: Commit updated trends (optional)
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -A
+          git diff --staged --quiet || git commit -m "Update trends $(date +%Y-%m-%d)"
+          git push
+        continue-on-error: true
